@@ -15,6 +15,7 @@ class BagRecorder:
         self.recording_topics = []
         self.save_location = None
         self.bag_path = None
+        self.storage_format = 'sqlite3'
         self.is_recording = False
     
     def get_all_topics(self):
@@ -34,35 +35,38 @@ class BagRecorder:
             print(f"Error getting topics: {e}")
             return []
     
-    def start_recording(self, topics, save_location):
+    def start_recording(self, topics, save_location, storage_format='sqlite3'):
         """
         Start recording selected topics to a bag file.
-        
+
         Args:
             topics: List of topic names to record
             save_location: Directory path where bag should be saved
+            storage_format: Storage plugin to use ('sqlite3' or 'mcap')
         """
         if self.is_recording:
             print("Already recording!")
             return False
-        
+
         if not topics:
             print("No topics specified!")
             return False
-        
+
         try:
             # Create save directory if it doesn't exist
             os.makedirs(save_location, exist_ok=True)
-            
+
             # Generate bag name with timestamp
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             bag_name = f'ros2_studio_bag_{timestamp}'
             self.bag_path = os.path.join(save_location, bag_name)
-            
+            self.storage_format = storage_format
+
             # Build command
             cmd = ['ros2', 'bag', 'record']
             cmd.extend(topics)
             cmd.extend(['-o', self.bag_path])
+            cmd.extend(['--storage', storage_format])
             
             # Start recording process
             self.recording_process = subprocess.Popen(
@@ -142,7 +146,8 @@ class BagRecorder:
             'is_recording': self.is_recording,
             'topics': self.recording_topics,
             'save_location': self.save_location,
-            'bag_path': self.bag_path
+            'bag_path': self.bag_path,
+            'storage_format': self.storage_format
         }
     
     def cleanup(self):

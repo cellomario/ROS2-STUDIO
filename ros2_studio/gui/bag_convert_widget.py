@@ -12,24 +12,25 @@ import os
 
 class ConversionThread(QThread):
     """Thread for running bag conversion in background."""
-    
+
     progress = pyqtSignal(str)
     finished = pyqtSignal(dict)
-    
+
     def __init__(self, converter, bag_path, output_dir, topics):
         super().__init__()
         self.converter = converter
         self.bag_path = bag_path
         self.output_dir = output_dir
         self.topics = topics
-    
+
     def run(self):
         """Run the conversion."""
-        self.progress.emit("Starting conversion...")
+        self.progress.emit('Starting conversion...')
         result = self.converter.convert_bag_to_csv(
             self.bag_path,
             self.output_dir,
-            self.topics
+            self.topics,
+            progress_cb=self.progress.emit,
         )
         self.finished.emit(result)
 
@@ -51,7 +52,7 @@ class BagConvertWidget(QWidget):
         layout.setSpacing(15)
         
         # File selection group
-        file_group = QGroupBox("Select Bag Folder (containing .db3 and metadata.yaml)")
+        file_group = QGroupBox("Select Bag Folder (sqlite3 / mcap)")
         file_layout = QVBoxLayout()
         
         file_input_layout = QHBoxLayout()
@@ -59,7 +60,7 @@ class BagConvertWidget(QWidget):
         file_label.setStyleSheet("font-weight: bold;")
         
         self.bag_path_input = QLineEdit()
-        self.bag_path_input.setPlaceholderText('/path/to/bag/folder')
+        self.bag_path_input.setPlaceholderText('/path/to/bag/folder  (sqlite3 or mcap)')
         
         browse_button = QPushButton('📁 Browse')
         browse_button.clicked.connect(self.browse_bag_file)
@@ -195,7 +196,7 @@ class BagConvertWidget(QWidget):
                 background-color: #ecf0f1;
             }
         """)
-        self.status_info.setText('Select a bag folder (containing .db3 and metadata.yaml) and load topics to begin conversion.')
+        self.status_info.setText('Select a bag folder (sqlite3 or mcap) and load topics to begin conversion.')
         
         status_layout.addWidget(self.status_label)
         status_layout.addWidget(self.status_info)
@@ -209,7 +210,7 @@ class BagConvertWidget(QWidget):
         
         directory = QFileDialog.getExistingDirectory(
             self,
-            'Select ROS2 Bag Folder (containing .db3 and metadata.yaml)',
+            'Select ROS2 Bag Folder',
             default_path
         )
         

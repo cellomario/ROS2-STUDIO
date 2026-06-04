@@ -1,8 +1,8 @@
 """Widget for ROS2 bag recording with topic selection."""
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QListWidget, 
+    QWidget, QVBoxLayout, QHBoxLayout, QListWidget,
     QPushButton, QLabel, QFileDialog, QLineEdit,
-    QGroupBox, QTextEdit, QAbstractItemView
+    QGroupBox, QTextEdit, QAbstractItemView, QComboBox
 )
 from PyQt5.QtCore import QTimer, Qt
 from PyQt5.QtGui import QFont
@@ -80,23 +80,52 @@ class BagRecordWidget(QWidget):
         
         # Save location group
         location_group = QGroupBox("Save Location")
-        location_layout = QHBoxLayout()
-        
+        location_layout = QVBoxLayout()
+
+        dir_row = QHBoxLayout()
         location_label = QLabel('Directory:')
         location_label.setStyleSheet("font-weight: bold;")
-        
+
         self.location_input = QLineEdit()
         self.location_input.setPlaceholderText('/path/to/save/bags')
         default_path = os.path.expanduser('~/ros2_bags')
         self.location_input.setText(default_path)
-        
+
         browse_button = QPushButton('📁 Browse')
         browse_button.clicked.connect(self.browse_location)
-        
-        location_layout.addWidget(location_label)
-        location_layout.addWidget(self.location_input)
-        location_layout.addWidget(browse_button)
-        
+
+        dir_row.addWidget(location_label)
+        dir_row.addWidget(self.location_input)
+        dir_row.addWidget(browse_button)
+
+        format_row = QHBoxLayout()
+        format_label = QLabel('Storage Format:')
+        format_label.setStyleSheet("font-weight: bold;")
+
+        self.storage_format_combo = QComboBox()
+        self.storage_format_combo.addItem('sqlite3', 'sqlite3')
+        self.storage_format_combo.addItem('mcap', 'mcap')
+        self.storage_format_combo.setToolTip(
+            'sqlite3: default ROS2 format (.db3)\n'
+            'mcap: modern format, better tooling support (.mcap)'
+        )
+        self.storage_format_combo.setStyleSheet("""
+            QComboBox {
+                padding: 4px 8px;
+                border: 1px solid #bdc3c7;
+                border-radius: 4px;
+                font-size: 12px;
+                min-width: 100px;
+            }
+        """)
+
+        format_row.addWidget(format_label)
+        format_row.addWidget(self.storage_format_combo)
+        format_row.addStretch()
+
+        location_layout.addLayout(dir_row)
+        location_layout.addLayout(format_row)
+
         location_group.setLayout(location_layout)
         layout.addWidget(location_group)
         
@@ -225,38 +254,41 @@ class BagRecordWidget(QWidget):
         selected_items = self.topic_list.selectedItems()
         selected_topics = [item.text() for item in selected_items]
         save_location = self.location_input.text()
-        
+        storage_format = self.storage_format_combo.currentData()
+
         # Validate inputs
         if not selected_topics:
             self.status_label.setText('Status: ⚠ Please select at least one topic!')
             self.status_label.setStyleSheet("font-size: 13px; font-weight: bold; color: #e74c3c;")
             return
-        
+
         if selected_topics == ['No topics available']:
             self.status_label.setText('Status: ⚠ No topics available!')
             self.status_label.setStyleSheet("font-size: 13px; font-weight: bold; color: #e74c3c;")
             return
-        
+
         if not save_location:
             self.status_label.setText('Status: ⚠ Please specify save location!')
             self.status_label.setStyleSheet("font-size: 13px; font-weight: bold; color: #e74c3c;")
             return
-        
+
         # Start recording
-        success = self.bag_recorder.start_recording(selected_topics, save_location)
-        
+        success = self.bag_recorder.start_recording(selected_topics, save_location, storage_format)
+
         if success:
             self.status_label.setText(f'Status: 🔴 Recording {len(selected_topics)} topics...')
             self.status_label.setStyleSheet("font-size: 13px; font-weight: bold; color: #27ae60;")
-            
+
             self.info_text.append(f'\n▶ Recording started')
             self.info_text.append(f'  Topics: {", ".join(selected_topics)}')
             self.info_text.append(f'  Location: {save_location}')
-            
+            self.info_text.append(f'  Format: {storage_format}')
+
             self.start_button.setEnabled(False)
             self.stop_button.setEnabled(True)
             self.topic_list.setEnabled(False)
             self.location_input.setEnabled(False)
+            self.storage_format_combo.setEnabled(False)
             
             # Start update timer
             import time
@@ -286,6 +318,7 @@ class BagRecordWidget(QWidget):
         self.stop_button.setEnabled(False)
         self.topic_list.setEnabled(True)
         self.location_input.setEnabled(True)
+        self.storage_format_combo.setEnabled(True)
         self.recording_start_time = None
     
     def update_recording_info(self):
