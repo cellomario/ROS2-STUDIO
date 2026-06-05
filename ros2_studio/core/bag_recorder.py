@@ -1,8 +1,8 @@
 """Backend for ROS2 bag recording functionality."""
 import subprocess
 import os
+import re
 from datetime import datetime
-import threading
 import signal
 
 
@@ -17,7 +17,21 @@ class BagRecorder:
         self.bag_path = None
         self.storage_format = 'sqlite3'
         self.is_recording = False
+        self.cli_duration_supported = self._check_duration_flag_support()
     
+    def _check_duration_flag_support(self):
+        """Return True if ros2 bag record supports --duration for total recording time."""
+        try:
+            result = subprocess.run(
+                ['ros2', 'bag', 'record', '--help'],
+                capture_output=True, text=True, timeout=5
+            )
+            output = result.stdout + result.stderr
+            # Match --duration as a standalone flag, not --max-bag-duration
+            return bool(re.search(r'[\s\[]--duration\b', output))
+        except Exception:
+            return False
+
     def get_all_topics(self):
         """Get list of all active topics."""
         try:
@@ -35,7 +49,7 @@ class BagRecorder:
             print(f"Error getting topics: {e}")
             return []
     
-    def start_recording(self, topics, save_location, storage_format='sqlite3'):
+    def start_recording(self, topics, save_location, storage_format='sqlite3', duration=0):
         """
         Start recording selected topics to a bag file.
 
@@ -67,6 +81,10 @@ class BagRecorder:
             cmd.extend(topics)
             cmd.extend(['-o', self.bag_path])
             cmd.extend(['--storage', storage_format])
+            
+            # Use CLI --duration flag if supported, otherwise GUI timer handles it
+            if duration > 0 and self.cli_duration_supported:
+                cmd.extend(['--duration', str(duration)])
             
             # Start recording process
             self.recording_process = subprocess.Popen(
@@ -101,12 +119,12 @@ class BagRecorder:
             return None
         
         try:
-            # Send SIGINT to the process group to gracefully stop recording
-            os.killpg(os.getpgid(self.recording_process.pid), signal.SIGINT)
-            
-            # Wait for process to complete
-            self.recording_process.wait(timeout=10)
-            
+            # Only send SIGINT if process is still running.
+            # If duration expired it already exited on its own.
+            if self.recording_process.poll() is None:
+                os.killpg(os.getpgid(self.recording_process.pid), signal.SIGINT)
+                self.recording_process.wait(timeout=10)
+
             saved_path = self.bag_path
             
             # Reset state

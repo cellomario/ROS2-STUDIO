@@ -3,6 +3,7 @@ import csv
 import json
 import os
 import subprocess
+import traceback
 import yaml
 from datetime import datetime
 
@@ -85,7 +86,6 @@ class BagConverter:
 
         Each topic produces:
           <topic_name>_<timestamp>.csv   — ML-ready flat data table
-          <topic_name>_<timestamp>_info.txt — companion metadata summary
 
         Args:
             bag_path: Path to bag folder
@@ -130,7 +130,7 @@ class BagConverter:
 
                     ok = self._convert_topic(
                         bag_path, topic, csv_path,
-                        bag_info['storage_format'], topic_type, emit
+                        bag_info['storage_format'], emit
                     )
                     if ok:
                         converted_files.append(
@@ -200,8 +200,7 @@ class BagConverter:
             info['topics'].append(topic_name)
             info['topic_types'][topic_name] = topic_type
 
-    def _convert_topic(self, bag_path, topic, csv_path,
-                       storage_format, topic_type, emit):
+    def _convert_topic(self, bag_path, topic, csv_path, storage_format, emit):
         """Read one topic from the bag and write a clean CSV."""
         if not ROSBAG2_AVAILABLE:
             emit('  ⚠ rosbag2_py not installed — writing placeholder CSV')
@@ -255,7 +254,6 @@ class BagConverter:
 
         except Exception as e:
             emit(f'  ✗ {e}')
-            import traceback
             traceback.print_exc()
             return False
 
@@ -306,7 +304,7 @@ class BagConverter:
 
     def _write_csv(self, csv_path, rows):
         """
-        Write rows to a clean CSV and a companion _info.txt summary.
+        Write rows to a clean CSV.
 
         Column order: timestamp_iso, timestamp_s, timestamp_ns, then all
         other fields sorted alphabetically.  Columns that are entirely

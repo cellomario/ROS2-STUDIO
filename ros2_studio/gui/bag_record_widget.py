@@ -2,12 +2,12 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QListWidget,
     QPushButton, QLabel, QFileDialog, QLineEdit,
-    QGroupBox, QTextEdit, QAbstractItemView, QComboBox
+    QGroupBox, QTextEdit, QAbstractItemView, QComboBox, QSpinBox
 )
-from PyQt5.QtCore import QTimer, Qt
-from PyQt5.QtGui import QFont
+from PyQt5.QtCore import QTimer
 from ros2_studio.core.bag_recorder import BagRecorder
 import os
+import time
 
 
 class BagRecordWidget(QWidget):
@@ -18,6 +18,7 @@ class BagRecordWidget(QWidget):
         super().__init__()
         self.bag_recorder = BagRecorder()
         self.recording_start_time = None
+        self.recording_duration = 0
         self.setup_ui()
         
         # Timer for updating recording duration
@@ -132,6 +133,20 @@ class BagRecordWidget(QWidget):
         # Control buttons
         control_group = QGroupBox("Recording Controls")
         control_layout = QVBoxLayout()
+        
+        duration_row = QHBoxLayout()
+        duration_label = QLabel('Duration (seconds):')
+        duration_label.setStyleSheet("font-weight: bold;")
+        self.duration_spinbox = QSpinBox()
+        self.duration_spinbox.setMinimum(0)
+        self.duration_spinbox.setMaximum(3600)
+        self.duration_spinbox.setValue(0)
+        self.duration_spinbox.setSpecialValueText('No limit')
+        self.duration_spinbox.setSuffix(' sec')
+        duration_row.addWidget(duration_label)
+        duration_row.addWidget(self.duration_spinbox)
+        duration_row.addStretch()
+        control_layout.addLayout(duration_row)
         
         button_layout = QHBoxLayout()
         self.start_button = QPushButton('🔴 Start Recording')
@@ -273,7 +288,8 @@ class BagRecordWidget(QWidget):
             return
 
         # Start recording
-        success = self.bag_recorder.start_recording(selected_topics, save_location, storage_format)
+        duration = self.duration_spinbox.value()
+        success = self.bag_recorder.start_recording(selected_topics, save_location, storage_format, duration)
 
         if success:
             self.status_label.setText(f'Status: 🔴 Recording {len(selected_topics)} topics...')
@@ -283,16 +299,22 @@ class BagRecordWidget(QWidget):
             self.info_text.append(f'  Topics: {", ".join(selected_topics)}')
             self.info_text.append(f'  Location: {save_location}')
             self.info_text.append(f'  Format: {storage_format}')
+            
+            if duration > 0:
+                self.info_text.append(f' Duration: {duration} sec (auto-stop)')
+            else:
+                self.info_text.append(f' Duration: unlimited')
 
             self.start_button.setEnabled(False)
             self.stop_button.setEnabled(True)
             self.topic_list.setEnabled(False)
             self.location_input.setEnabled(False)
             self.storage_format_combo.setEnabled(False)
+            self.duration_spinbox.setEnabled(False)
             
             # Start update timer
-            import time
             self.recording_start_time = time.time()
+            self.recording_duration = duration
             self.update_timer.start(1000)
         else:
             self.status_label.setText('Status: ✗ Failed to start recording!')
@@ -319,18 +341,56 @@ class BagRecordWidget(QWidget):
         self.topic_list.setEnabled(True)
         self.location_input.setEnabled(True)
         self.storage_format_combo.setEnabled(True)
+        self.duration_spinbox.setEnabled(True)
         self.recording_start_time = None
+        self.recording_duration = 0
     
     def update_recording_info(self):
         """Update recording duration display."""
         if self.recording_start_time:
-            import time
-            duration = int(time.time() - self.recording_start_time)
-            minutes = duration // 60
-            seconds = duration % 60
+            elapsed = int(time.time() - self.recording_start_time)
+            minutes = elapsed // 60
+            seconds = elapsed % 60
             self.status_label.setText(
                 f'Status: 🔴 Recording... Duration: {minutes:02d}:{seconds:02d}'
             )
+
+            # Auto-stop when set duration is reached
+            if self.recording_duration > 0 and elapsed >= self.recording_duration:
+                self.stop_recording()
+                return
+
+            if self.bag_recorder.recording_process:
+                retcode = self.bag_recorder.recording_process.poll()
+                if retcode is not None:
+                    if retcode == 0:
+                        # Clean exit — duration expired or normal stop
+                        self.stop_recording()
+                    else:
+                        # Process failed — read stderr and show error
+                        self.update_timer.stop()
+                        try:
+                            stderr_output = self.bag_recorder.recording_process.stderr.read().strip()
+                        except Exception:
+                            stderr_output = ''
+                        self.bag_recorder.recording_process = None
+                        self.bag_recorder.is_recording = False
+                        self.bag_recorder.recording_topics = []
+                        self.recording_start_time = None
+
+                        error_msg = stderr_output[:300] if stderr_output else f'Process exited with code {retcode}'
+                        self.status_label.setText('Status: ✗ Recording failed!')
+                        self.status_label.setStyleSheet(
+                            "font-size: 13px; font-weight: bold; color: #e74c3c;"
+                        )
+                        self.info_text.append(f'\n✗ Recording process error:\n  {error_msg}')
+
+                        self.start_button.setEnabled(True)
+                        self.stop_button.setEnabled(False)
+                        self.topic_list.setEnabled(True)
+                        self.location_input.setEnabled(True)
+                        self.storage_format_combo.setEnabled(True)
+                        self.duration_spinbox.setEnabled(True)
     
     def cleanup(self):
         """Clean up resources."""

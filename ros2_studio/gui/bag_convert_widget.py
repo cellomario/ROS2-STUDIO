@@ -4,8 +4,7 @@ from PyQt5.QtWidgets import (
     QLabel, QFileDialog, QLineEdit, QGroupBox,
     QTextEdit, QListWidget, QAbstractItemView, QProgressBar
 )
-from PyQt5.QtCore import Qt, QThread, pyqtSignal
-from PyQt5.QtGui import QFont
+from PyQt5.QtCore import QThread, pyqtSignal
 from ros2_studio.core.bag_converter import BagConverter
 import os
 
