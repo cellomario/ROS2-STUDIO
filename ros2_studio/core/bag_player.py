@@ -52,7 +52,7 @@ class BagPlayer:
                     
                     if 'Duration:' in line:
                         info['duration'] = line.split(':', 1)[1].strip()
-                    elif 'Size:' in line:
+                    elif 'Bag size:' in line:
                         info['size'] = line.split(':', 1)[1].strip()
                     elif 'messages' in line.lower() and ':' in line:
                         info['messages'] = line.split(':', 1)[1].strip()

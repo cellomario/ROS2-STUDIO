@@ -4,8 +4,7 @@ from PyQt5.QtWidgets import (
     QLabel, QFileDialog, QLineEdit, QGroupBox,
     QTextEdit, QSlider, QCheckBox, QDoubleSpinBox
 )
-from PyQt5.QtCore import QTimer, Qt
-from PyQt5.QtGui import QFont
+from PyQt5.QtCore import QTimer
 from ros2_studio.core.bag_player import BagPlayer
 import os
 
@@ -30,7 +29,7 @@ class BagPlayWidget(QWidget):
         layout.setSpacing(15)
         
         # File selection group
-        file_group = QGroupBox("Select Bag File")
+        file_group = QGroupBox("Select Bag Folder (sqlite3 / mcap)")
         file_layout = QVBoxLayout()
         
         # Bag file input
@@ -39,7 +38,7 @@ class BagPlayWidget(QWidget):
         file_label.setStyleSheet("font-weight: bold;")
         
         self.bag_path_input = QLineEdit()
-        self.bag_path_input.setPlaceholderText('/path/to/bag/file')
+        self.bag_path_input.setPlaceholderText('/path/to/bag/folder')
         self.bag_path_input.textChanged.connect(self.on_bag_path_changed)
         
         browse_button = QPushButton('📁 Browse')
@@ -227,7 +226,7 @@ class BagPlayWidget(QWidget):
         
         directory = QFileDialog.getExistingDirectory(
             self,
-            'Select Bag Directory',
+            'Select Bag Folder (sqlite3 / mcap)',
             default_path
         )
         
@@ -239,7 +238,7 @@ class BagPlayWidget(QWidget):
                 self,
                 'Select Bag File',
                 default_path,
-                'Bag Files (*.db3 *.bag);;All Files (*)'
+                'Bag Files (*.db3 *.mcap *.bag);;All Files (*)'
             )
             if file_path:
                 self.bag_path_input.setText(file_path)

@@ -49,7 +49,7 @@ class BagRecorder:
             print(f"Error getting topics: {e}")
             return []
     
-    def start_recording(self, topics, save_location, storage_format='sqlite3', duration=0):
+    def start_recording(self, topics, save_location, storage_format='sqlite3', duration=0, split_duration=0):
         """
         Start recording selected topics to a bag file.
 
@@ -57,6 +57,8 @@ class BagRecorder:
             topics: List of topic names to record
             save_location: Directory path where bag should be saved
             storage_format: Storage plugin to use ('sqlite3' or 'mcap')
+            duration: Total recording time in seconds (0 = no limit)
+            split_duration: Split bag into new file every N seconds (0 = no split)
         """
         if self.is_recording:
             print("Already recording!")
@@ -85,6 +87,10 @@ class BagRecorder:
             # Use CLI --duration flag if supported, otherwise GUI timer handles it
             if duration > 0 and self.cli_duration_supported:
                 cmd.extend(['--duration', str(duration)])
+
+            # Split bag into multiple files every N seconds (-d is available on all distros)
+            if split_duration > 0:
+                cmd.extend(['-d', str(split_duration)])
             
             # Start recording process
             self.recording_process = subprocess.Popen(

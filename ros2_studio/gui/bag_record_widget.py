@@ -135,7 +135,7 @@ class BagRecordWidget(QWidget):
         control_layout = QVBoxLayout()
         
         duration_row = QHBoxLayout()
-        duration_label = QLabel('Duration (seconds):')
+        duration_label = QLabel('Total Duration:')
         duration_label.setStyleSheet("font-weight: bold;")
         self.duration_spinbox = QSpinBox()
         self.duration_spinbox.setMinimum(0)
@@ -143,10 +143,26 @@ class BagRecordWidget(QWidget):
         self.duration_spinbox.setValue(0)
         self.duration_spinbox.setSpecialValueText('No limit')
         self.duration_spinbox.setSuffix(' sec')
+        self.duration_spinbox.setToolTip('Stop recording automatically after this many seconds. 0 = record until manually stopped.')
         duration_row.addWidget(duration_label)
         duration_row.addWidget(self.duration_spinbox)
         duration_row.addStretch()
         control_layout.addLayout(duration_row)
+
+        split_row = QHBoxLayout()
+        split_label = QLabel('Split Every:')
+        split_label.setStyleSheet("font-weight: bold;")
+        self.split_duration_spinbox = QSpinBox()
+        self.split_duration_spinbox.setMinimum(0)
+        self.split_duration_spinbox.setMaximum(3600)
+        self.split_duration_spinbox.setValue(0)
+        self.split_duration_spinbox.setSpecialValueText('No split')
+        self.split_duration_spinbox.setSuffix(' sec')
+        self.split_duration_spinbox.setToolTip('Split the bag into a new file every N seconds. 0 = single bag file.')
+        split_row.addWidget(split_label)
+        split_row.addWidget(self.split_duration_spinbox)
+        split_row.addStretch()
+        control_layout.addLayout(split_row)
         
         button_layout = QHBoxLayout()
         self.start_button = QPushButton('🔴 Start Recording')
@@ -289,7 +305,8 @@ class BagRecordWidget(QWidget):
 
         # Start recording
         duration = self.duration_spinbox.value()
-        success = self.bag_recorder.start_recording(selected_topics, save_location, storage_format, duration)
+        split_duration = self.split_duration_spinbox.value()
+        success = self.bag_recorder.start_recording(selected_topics, save_location, storage_format, duration, split_duration)
 
         if success:
             self.status_label.setText(f'Status: 🔴 Recording {len(selected_topics)} topics...')
@@ -301,9 +318,11 @@ class BagRecordWidget(QWidget):
             self.info_text.append(f'  Format: {storage_format}')
             
             if duration > 0:
-                self.info_text.append(f' Duration: {duration} sec (auto-stop)')
+                self.info_text.append(f'  Total Duration: {duration} sec (auto-stop)')
             else:
-                self.info_text.append(f' Duration: unlimited')
+                self.info_text.append(f'  Total Duration: unlimited')
+            if split_duration > 0:
+                self.info_text.append(f'  Split Every: {split_duration} sec')
 
             self.start_button.setEnabled(False)
             self.stop_button.setEnabled(True)
@@ -311,6 +330,7 @@ class BagRecordWidget(QWidget):
             self.location_input.setEnabled(False)
             self.storage_format_combo.setEnabled(False)
             self.duration_spinbox.setEnabled(False)
+            self.split_duration_spinbox.setEnabled(False)
             
             # Start update timer
             self.recording_start_time = time.time()
@@ -342,6 +362,7 @@ class BagRecordWidget(QWidget):
         self.location_input.setEnabled(True)
         self.storage_format_combo.setEnabled(True)
         self.duration_spinbox.setEnabled(True)
+        self.split_duration_spinbox.setEnabled(True)
         self.recording_start_time = None
         self.recording_duration = 0
     
@@ -391,6 +412,7 @@ class BagRecordWidget(QWidget):
                         self.location_input.setEnabled(True)
                         self.storage_format_combo.setEnabled(True)
                         self.duration_spinbox.setEnabled(True)
+                        self.split_duration_spinbox.setEnabled(True)
     
     def cleanup(self):
         """Clean up resources."""
