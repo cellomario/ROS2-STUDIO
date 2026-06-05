@@ -4,17 +4,18 @@ A comprehensive ROS2 monitoring and management tool with GUI for performance mon
 
 ## Features
 
-- 📊 **Performance Monitor** - Real-time CPU/memory monitoring for topics and nodes with graphical plots
-- 🔴 **Bag Recorder** - Multi-topic recording with custom save locations
-- ▶️ **Bag Player** - Playback with adjustable rate (0.1x-10x) and loop controls
-- 🔄 **Bag to CSV Converter** - Full message deserialization to CSV format
+- 📊 **Performance Monitor** - Real-time CPU/memory/frequency monitoring for topics and nodes with graphical plots
+- 🔴 **Bag Recorder** - Multi-topic recording with sqlite3/mcap format selection, auto-stop duration, and bag splitting
+- ▶️ **Bag Player** - Playback of sqlite3/mcap bags with adjustable rate (0.1x-10x) and loop controls
+- 🔄 **Bag to CSV Converter** - Convert sqlite3/mcap bags to clean ML-ready CSV files
 - 🎛️ **System Dashboard** - System resources, ROS2 entities, network stats, and process monitoring
 
 ## Installation
 
 ```bash
 # Install dependencies
-sudo apt-get install python3-pyqt5 python3-matplotlib python3-psutil ros-$ROS_DISTRO-rosbag2-py
+sudo apt-get install python3-pyqt5 python3-matplotlib python3-psutil
+sudo apt-get install ros-$ROS_DISTRO-rosbag2-py ros-$ROS_DISTRO-rosbag2-storage-mcap
 
 # Build
 cd ~/ros2_ws
@@ -29,9 +30,9 @@ ros2 studio
 
 Launch the GUI and select features from the dropdown menu:
 1. **Performance Monitor** - Select Topics/Nodes and view real-time metrics
-2. **Bag Recorder** - Select topics, choose location, start/stop recording
-3. **Bag Player** - Load bag, set rate/loop options, control playback
-4. **CSV Converter** - Load bag, select topics, convert to CSV
+2. **Bag Recorder** - Select topics, choose format (sqlite3/mcap), set duration/split, start/stop recording
+3. **Bag Player** - Load bag folder, set rate/loop options, control playback
+4. **CSV Converter** - Load bag folder, select topics, convert to CSV
 5. **System Dashboard** - View system resources, ROS2 entities, network, and processes
 
 ## Project Structure
@@ -42,14 +43,14 @@ ros2_studio/
 │   ├── core/          # Backend (monitoring, recording, playback, conversion, dashboard)
 │   ├── gui/           # UI widgets for each feature
 │   ├── command/       # ROS2 CLI extension
-│   └── utils/         # Helper functions
+│   └── main.py
 ├── package.xml        # Dependencies
 └── setup.py           # Entry points
 ```
 
 ## Requirements
 
-- ROS2 (Foxy/Galactic/Humble/later)
+- ROS2 (Foxy/Galactic/Humble/Iron/Jazzy/Lyrical or later)
 - Python 3.8+
 - PyQt5, matplotlib, psutil, rosbag2_py
 
@@ -61,7 +62,7 @@ ros2_studio/
 
 ### Bag Recorder
 ![Bag Recorder](ros2_studio/bag%20recorder.png)
-*Multi-topic selection with recording controls*
+*Multi-topic selection with format, duration, and split controls*
 
 ### Bag Player
 ![Bag Player](ros2_studio/bag%20play.png)
@@ -69,7 +70,7 @@ ros2_studio/
 
 ### Bag to CSV Converter
 ![CSV Converter](ros2_studio/convert%20to%20csv.png)
-*Convert bag topics to CSV with full message deserialization*
+*Convert bag topics to ML-ready CSV with full message deserialization*
 
 ### System Dashboard
 ![System Dashboard](ros2_studio/systm%20dashboard.png)
