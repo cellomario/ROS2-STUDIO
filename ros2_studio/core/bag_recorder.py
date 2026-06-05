@@ -147,8 +147,8 @@ class BagRecorder:
             try:
                 os.killpg(os.getpgid(self.recording_process.pid), signal.SIGKILL)
                 self.recording_process.wait(timeout=5)
-            except:
-                pass
+            except Exception as e:
+                print(f"Force kill failed: {e}")
             self.recording_process = None
             self.is_recording = False
             return self.bag_path

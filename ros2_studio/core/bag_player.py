@@ -58,11 +58,14 @@ class BagPlayer:
                         info['messages'] = line.split(':', 1)[1].strip()
                     elif 'Topic information:' in line:
                         parsing_topics = True
-                    elif parsing_topics and line and '|' in line:
-                        # Parse topic info (format varies)
-                        parts = [p.strip() for p in line.split('|')]
-                        if len(parts) >= 2 and parts[0] and not parts[0].startswith('Topic'):
-                            info['topics'].append(parts[0])
+                    elif parsing_topics and 'Topic:' in line and '|' in line:
+                        for part in line.split('|'):
+                            part = part.strip()
+                            if part.startswith('Topic:'):
+                                topic_name = part[6:].strip()
+                                if topic_name:
+                                    info['topics'].append(topic_name)
+                                break
                 
                 return info
             else:
@@ -177,13 +180,12 @@ class BagPlayer:
             return True
             
         except subprocess.TimeoutExpired:
-            # Force kill if graceful shutdown fails
             print("Timeout waiting for playback to stop, forcing...")
             try:
                 os.killpg(os.getpgid(self.playback_process.pid), signal.SIGKILL)
                 self.playback_process.wait(timeout=3)
-            except:
-                pass
+            except Exception as e:
+                print(f"Force kill failed: {e}")
             self.playback_process = None
             self.is_playing = False
             self.bag_file = None

@@ -228,9 +228,7 @@ class BagConverter:
 
             rows = []
             while reader.has_next():
-                tname, data, ts_ns = reader.read_next()
-                if tname != topic:
-                    continue
+                _, data, ts_ns = reader.read_next()
                 try:
                     msg = deserialize_message(data, msg_class)
                     row = self._flatten_message(msg)

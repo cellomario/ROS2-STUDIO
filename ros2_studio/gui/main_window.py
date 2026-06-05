@@ -159,24 +159,25 @@ class MainWindow(QMainWindow):
         """Change the displayed feature widget."""
         self.stacked_widget.setCurrentIndex(index)
         
-        # Update status bar
-        features = ['Performance Monitor', 'Bag Recorder', 'Bag Player', 'Bag to CSV Converter']
+        features = [
+            'Performance Monitor', 'Bag Recorder', 'Bag Player',
+            'Bag to CSV Converter', 'System Dashboard'
+        ]
         if 0 <= index < len(features):
             self.status_bar.showMessage(f'Active: {features[index]}')
     
     def closeEvent(self, event):
         """Handle window close event."""
         # Clean up widgets
-        try:
-            if hasattr(self, 'monitoring_widget'):
-                self.monitoring_widget.cleanup()
-            if hasattr(self, 'bag_record_widget'):
-                self.bag_record_widget.cleanup()
-            if hasattr(self, 'bag_play_widget'):
-                self.bag_play_widget.cleanup()
-            if hasattr(self, 'bag_convert_widget'):
-                self.bag_convert_widget.cleanup()
-        except Exception as e:
-            print(f"Error during cleanup: {e}")
+        for widget_name in [
+            'monitoring_widget', 'bag_record_widget',
+            'bag_play_widget', 'bag_convert_widget', 'dashboard_widget'
+        ]:
+            widget = getattr(self, widget_name, None)
+            if widget:
+                try:
+                    widget.cleanup()
+                except Exception as e:
+                    print(f"Error cleaning up {widget_name}: {e}")
         
         event.accept()

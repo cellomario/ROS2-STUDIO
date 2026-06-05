@@ -1,12 +1,11 @@
 """Performance monitoring widget with graphical display."""
+import time
+import traceback
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QComboBox, 
+    QWidget, QVBoxLayout, QHBoxLayout, QComboBox,
     QLabel, QPushButton, QGroupBox, QGridLayout
 )
-from PyQt5.QtCore import QTimer, Qt
-from PyQt5.QtGui import QFont
-import matplotlib
-matplotlib.use('Qt5Agg')
+from PyQt5.QtCore import QTimer
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from ros2_studio.core.performance_monitor import PerformanceMonitor
@@ -142,7 +141,6 @@ class MonitoringWidget(QWidget):
                     self.item_selector.addItem('No nodes available')
         except Exception as e:
             print(f"Error updating item list: {e}")
-            import traceback
             traceback.print_exc()
             self.item_selector.addItem('Error loading items')
     
@@ -175,7 +173,6 @@ class MonitoringWidget(QWidget):
             
             if metrics:
                 # Update history
-                import time
                 current_time = time.time()
                 if self.start_time is None:
                     self.start_time = current_time

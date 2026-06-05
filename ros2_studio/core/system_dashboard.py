@@ -126,12 +126,14 @@ class SystemDashboard:
         
         try:
             nodes = self.node.get_node_names()
+            namespace_map = {
+                name: ns
+                for name, ns in self.node.get_node_names_and_namespaces()
+            }
             node_details = []
-            
+
             for node_name in nodes:
-                # Get node namespace
-                namespace = self.node.get_node_names_and_namespaces()
-                node_ns = next((ns for name, ns in namespace if name == node_name), '/')
+                node_ns = namespace_map.get(node_name, '/')
                 
                 node_details.append({
                     'name': node_name,

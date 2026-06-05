@@ -6,6 +6,12 @@ import threading
 import time
 from collections import defaultdict, deque
 
+try:
+    from rosidl_runtime_py.utilities import get_message
+    ROSIDL_AVAILABLE = True
+except ImportError:
+    ROSIDL_AVAILABLE = False
+
 
 class PerformanceMonitor:
     """Monitor performance metrics for ROS2 topics and nodes."""
@@ -70,7 +76,10 @@ class PerformanceMonitor:
         """Get performance metrics for a specific topic."""
         if not self.node:
             return None
-        
+
+        # Ensure we are subscribed so frequency tracking works
+        self.subscribe_to_topic(topic_name)
+
         try:
             # Get system-level metrics
             cpu_percent = psutil.cpu_percent(interval=0.1)
@@ -169,30 +178,31 @@ class PerformanceMonitor:
         self.topic_message_times[topic_name].append(time.time())
     
     def subscribe_to_topic(self, topic_name):
-        """Subscribe to a topic for monitoring."""
+        """Subscribe to a topic to track message timestamps for frequency."""
+        if not self.node or not ROSIDL_AVAILABLE:
+            return
         if topic_name in self.subscriptions:
             return
-        
+
         try:
-            # Get topic type
             topic_list = self.node.get_topic_names_and_types()
             topic_type = None
             for topic, types in topic_list:
-                if topic == topic_name:
-                    if types:
-                        topic_type = types[0]
+                if topic == topic_name and types:
+                    topic_type = types[0]
                     break
-            
+
             if not topic_type:
-                print(f"Could not determine type for topic {topic_name}")
                 return
-            
-            # For simplicity, we'll track messages without full type support
-            # This is a limitation that can be improved with rosidl runtime
-            print(f"Monitoring topic: {topic_name} ({topic_type})")
-            
+
+            msg_class = get_message(topic_type)
+            # Use default-arg capture so each lambda binds its own topic_name
+            callback = lambda msg, tn=topic_name: self._topic_callback(msg, tn)
+            sub = self.node.create_subscription(msg_class, topic_name, callback, 10)
+            self.subscriptions[topic_name] = sub
+            print(f"Subscribed to {topic_name} ({topic_type})")
         except Exception as e:
-            print(f"Error subscribing to topic {topic_name}: {e}")
+            print(f"Could not subscribe to {topic_name}: {e}")
     
     def cleanup(self):
         """Clean up resources."""
@@ -201,8 +211,8 @@ class PerformanceMonitor:
             for sub in self.subscriptions.values():
                 try:
                     self.node.destroy_subscription(sub)
-                except:
-                    pass
+                except Exception as e:
+                    print(f"Error destroying subscription: {e}")
             
             if self.executor:
                 self.executor.shutdown()
