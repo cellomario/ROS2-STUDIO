@@ -17,6 +17,8 @@ class BagRecorder:
         self.bag_path = None
         self.storage_format = 'sqlite3'
         self.is_recording = False
+        self.stderr_log_path = None
+        self._stderr_log_file = None
         self.cli_duration_supported = self._check_duration_flag_support()
     
     def _check_duration_flag_support(self):
@@ -91,12 +93,19 @@ class BagRecorder:
             # Split bag into multiple files every N seconds (-d is available on all distros)
             if split_duration > 0:
                 cmd.extend(['-d', str(split_duration)])
-            
+
+            # Redirect stderr to a log file instead of an unread PIPE. An unread
+            # PIPE fills its OS buffer under sustained output (e.g. high-bitrate
+            # topics printing warnings) and blocks the subprocess on write(),
+            # which can stall bag writing. stdout is discarded entirely.
+            self.stderr_log_path = f'{self.bag_path}.log'
+            self._stderr_log_file = open(self.stderr_log_path, 'w')
+
             # Start recording process
             self.recording_process = subprocess.Popen(
                 cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                stdout=subprocess.DEVNULL,
+                stderr=self._stderr_log_file,
                 text=True,
                 preexec_fn=os.setsid  # Create new process group
             )
@@ -132,7 +141,8 @@ class BagRecorder:
                 self.recording_process.wait(timeout=10)
 
             saved_path = self.bag_path
-            
+            self._close_stderr_log()
+
             # Reset state
             self.recording_process = None
             self.is_recording = False
@@ -149,12 +159,14 @@ class BagRecorder:
                 self.recording_process.wait(timeout=5)
             except Exception as e:
                 print(f"Force kill failed: {e}")
+            self._close_stderr_log()
             self.recording_process = None
             self.is_recording = False
             return self.bag_path
             
         except Exception as e:
             print(f"Error stopping recording: {e}")
+            self._close_stderr_log()
             self.recording_process = None
             self.is_recording = False
             return None
@@ -173,8 +185,38 @@ class BagRecorder:
             'bag_path': self.bag_path,
             'storage_format': self.storage_format
         }
-    
+
+    def _close_stderr_log(self):
+        """Close the stderr log file handle if it is currently open."""
+        if self._stderr_log_file is not None:
+            try:
+                self._stderr_log_file.close()
+            except Exception as e:
+                print(f"Error closing stderr log: {e}")
+            self._stderr_log_file = None
+
+    def read_stderr_tail(self, max_chars=300):
+        """
+        Read the tail of the captured stderr log for the last recording process.
+
+        Args:
+            max_chars: Maximum number of characters to return from the end of the log
+
+        Returns:
+            The last `max_chars` characters of the stderr log, or '' if unavailable
+        """
+        self._close_stderr_log()
+        if not self.stderr_log_path:
+            return ''
+        try:
+            with open(self.stderr_log_path, 'r') as log_file:
+                content = log_file.read()
+            return content.strip()[-max_chars:]
+        except Exception:
+            return ''
+
     def cleanup(self):
         """Clean up resources."""
         if self.is_recording:
             self.stop_recording()
+        self._close_stderr_log()

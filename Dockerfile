@@ -10,7 +10,7 @@ COPY . src/ros2_studio/
 
 # Update rosdep and install dependencies
 RUN rosdep update && \
-    rosdep install --from-paths src --ignore-src -r -y && \
+    rosdep install --from-paths src --ignore-src -r -y --rosdistro jazzy && \
     rm -rf /var/lib/apt/lists/*
 
 # Build the package

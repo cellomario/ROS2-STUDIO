@@ -388,18 +388,15 @@ class BagRecordWidget(QWidget):
                         # Clean exit — duration expired or normal stop
                         self.stop_recording()
                     else:
-                        # Process failed — read stderr and show error
+                        # Process failed — read stderr log tail and show error
                         self.update_timer.stop()
-                        try:
-                            stderr_output = self.bag_recorder.recording_process.stderr.read().strip()
-                        except Exception:
-                            stderr_output = ''
+                        stderr_output = self.bag_recorder.read_stderr_tail(300)
                         self.bag_recorder.recording_process = None
                         self.bag_recorder.is_recording = False
                         self.bag_recorder.recording_topics = []
                         self.recording_start_time = None
 
-                        error_msg = stderr_output[:300] if stderr_output else f'Process exited with code {retcode}'
+                        error_msg = stderr_output if stderr_output else f'Process exited with code {retcode}'
                         self.status_label.setText('Status: ✗ Recording failed!')
                         self.status_label.setStyleSheet(
                             "font-size: 13px; font-weight: bold; color: #e74c3c;"
