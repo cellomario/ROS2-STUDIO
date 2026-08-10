@@ -2,7 +2,15 @@ FROM ros:jazzy
 
 # Update apt package index and install emoji font for GUI icons
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    fonts-noto-color-emoji
+    fonts-noto-color-emoji \
+    python3-pyqt5 \
+    pyqt5-dev \
+    qtwayland5 \
+    python3-psutil \
+    python3-matplotlib \
+    ros-jazzy-rosbag2-py \
+    ros-jazzy-rosbag2-storage-mcap
+
 
 # Copy the repository into the workspace
 WORKDIR /ros2_ws

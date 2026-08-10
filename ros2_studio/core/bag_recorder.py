@@ -5,22 +5,89 @@ import re
 from datetime import datetime
 import signal
 
+# Default values for every supported `ros2 bag record` option. A record
+# config YAML file (see record_config.py) pre-populates this dict on top of
+# these defaults, and the GUI reads/writes directly into it afterwards - so
+# at record time `options` always holds the seamless merge of file defaults
+# and whatever the user changed.
+DEFAULT_OPTIONS = {
+    'topics': [],
+    'storage': 'mcap',
+    'max_bag_duration': 0,   # GUI "Split Every" (seconds), -d/--max-bag-duration
+}
+
+# Options that live in `options` for convenience (so a single record config
+# file/dict can set them) but are not `ros2 bag record` CLI flags themselves,
+# so `_options_to_args()` must never dump them.
+_NON_CLI_OPTIONS = {'output_dir'}
+
+
+def _options_to_args(options):
+    """
+    Translate the options dict into `ros2 bag record` CLI arguments.
+
+    Translation is driven purely by each value's Python type, since every
+    supported option maps 1:1 to a `--option-name` argument:
+      bool  True  -> ['--option-name'];      False/None -> omitted
+      list/tuple  -> ['--option-name', item1, item2, ...]
+      dict        -> ['--option-name', 'KEY1=VALUE1', ...]
+      scalar      -> ['--option-name', str(value)];  skipped if falsy/empty
+
+    Args:
+        options: Flat dict of option_name (underscores) -> value
+
+    Returns:
+        List of CLI argument tokens
+    """
+    args = []
+    for option_name, value in options.items():
+        if option_name in _NON_CLI_OPTIONS:
+            continue
+        flag = f"--{option_name.replace('_', '-')}"
+        if isinstance(value, bool):
+            if value:
+                args.append(flag)
+        elif isinstance(value, (list, tuple)):
+            if value:
+                args.append(flag)
+                args.extend(str(item) for item in value)
+        elif isinstance(value, dict):
+            if value:
+                args.append(flag)
+                args.extend(f'{key}={val}' for key, val in value.items())
+        elif value:
+            args.extend([flag, str(value)])
+    return args
+
 
 class BagRecorder:
-    """Handle ROS2 bag recording operations."""
-    
-    def __init__(self):
-        """Initialize bag recorder."""
+    """Handle ROS2 bag recording operations.
+
+    `self.options` is the single source of truth for every `ros2 bag record`
+    setting (topics, storage format, compression, QoS overrides, etc.). It
+    starts out as `DEFAULT_OPTIONS`, optionally pre-populated from a loaded
+    record config file, and the GUI reads/writes directly into it. At
+    `start_recording()` time, the full dict is dumped to CLI arguments.
+    """
+
+    def __init__(self, initial_options=None):
+        """Initialize bag recorder.
+
+        Args:
+            initial_options: Optional dict merged on top of DEFAULT_OPTIONS
+                (e.g. loaded from a record config file)
+        """
+        self.options = dict(DEFAULT_OPTIONS)
+        self.options.update(initial_options or {})
+
         self.recording_process = None
-        self.recording_topics = []
         self.save_location = None
         self.bag_path = None
-        self.storage_format = 'mcap'
         self.is_recording = False
         self.stderr_log_path = None
         self._stderr_log_file = None
         self.cli_duration_supported = self._check_duration_flag_support()
-    
+
     def _check_duration_flag_support(self):
         """Return True if ros2 bag record supports --duration for total recording time."""
         try:
@@ -50,23 +117,23 @@ class BagRecorder:
         except Exception as e:
             print(f"Error getting topics: {e}")
             return []
-    
-    def start_recording(self, topics, save_location, storage_format='mcap', duration=0, split_duration=0):
+
+    def start_recording(self, save_location, duration=0):
         """
-        Start recording selected topics to a bag file.
+        Start recording to a bag file, using the current `self.options`.
 
         Args:
-            topics: List of topic names to record
             save_location: Directory path where bag should be saved
-            storage_format: Storage plugin to use ('sqlite3' or 'mcap')
-            duration: Total recording time in seconds (0 = no limit)
-            split_duration: Split bag into new file every N seconds (0 = no split)
+            duration: Total recording time in seconds (0 = no limit). Not
+                part of `self.options` since it is a GUI-only concept: it
+                maps to the CLI --duration flag where supported, and to a
+                GUI-side auto-stop timer otherwise.
         """
         if self.is_recording:
             print("Already recording!")
             return False
 
-        if not topics:
+        if not self.options.get('topics'):
             print("No topics specified!")
             return False
 
@@ -78,21 +145,15 @@ class BagRecorder:
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             bag_name = f'ros2_studio_bag_{timestamp}'
             self.bag_path = os.path.join(save_location, bag_name)
-            self.storage_format = storage_format
 
-            # Build command
+            # Build command: base verb, all options dumped generically, then -o
             cmd = ['ros2', 'bag', 'record']
-            cmd.extend(topics)
+            cmd.extend(_options_to_args(self.options))
             cmd.extend(['-o', self.bag_path])
-            cmd.extend(['--storage', storage_format])
-            
+
             # Use CLI --duration flag if supported, otherwise GUI timer handles it
             if duration > 0 and self.cli_duration_supported:
                 cmd.extend(['--duration', str(duration)])
-
-            # Split bag into multiple files every N seconds (-d is available on all distros)
-            if split_duration > 0:
-                cmd.extend(['-d', str(split_duration)])
 
             # Redirect stderr to a log file instead of an unread PIPE. An unread
             # PIPE fills its OS buffer under sustained output (e.g. high-bitrate
@@ -109,19 +170,18 @@ class BagRecorder:
                 text=True,
                 preexec_fn=os.setsid  # Create new process group
             )
-            
-            self.recording_topics = topics
+
             self.save_location = save_location
             self.is_recording = True
-            
-            print(f"Started recording {len(topics)} topics to {self.bag_path}")
+
+            print(f"Started recording {len(self.options['topics'])} topics to {self.bag_path}")
             return True
-            
+
         except Exception as e:
             print(f"Error starting recording: {e}")
             self.is_recording = False
             return False
-    
+
     def stop_recording(self):
         """
         Stop the current recording.
@@ -149,7 +209,6 @@ class BagRecorder:
             # Reset state
             self.recording_process = None
             self.is_recording = False
-            self.recording_topics = []
             
             print(f"Stopped recording. Bag saved to: {saved_path}")
             return saved_path
@@ -183,10 +242,10 @@ class BagRecorder:
         """
         return {
             'is_recording': self.is_recording,
-            'topics': self.recording_topics,
+            'topics': self.options.get('topics', []),
             'save_location': self.save_location,
             'bag_path': self.bag_path,
-            'storage_format': self.storage_format
+            'storage_format': self.options.get('storage'),
         }
 
     def _close_stderr_log(self):

@@ -13,17 +13,55 @@ import time
 class BagRecordWidget(QWidget):
     """Widget for recording ROS2 bags."""
     
-    def __init__(self):
-        """Initialize bag record widget."""
+    def __init__(self, record_config=None, record_config_path=None):
+        """Initialize bag record widget.
+
+        Args:
+            record_config: Optional flat dict of default bag record options
+                (option_name -> value), pre-populating `bag_recorder.options`
+            record_config_path: Path the config was loaded from, shown in a
+                startup notice when record_config is set
+        """
         super().__init__()
-        self.bag_recorder = BagRecorder()
+        self.bag_recorder = BagRecorder(initial_options=record_config)
         self.recording_start_time = None
         self.recording_duration = 0
         self.setup_ui()
-        
+        self._apply_options_to_widgets()
+        if record_config:
+            self.status_label.setText('Status: Ready (config loaded)')
+            self.info_text.append(
+                f'\nℹ Defaults loaded from: {record_config_path}\n'
+                '  Some configuration entries are not shown in the GUI but will '
+                'still be applied when recording starts.'
+            )
+
         # Timer for updating recording duration
         self.update_timer = QTimer()
         self.update_timer.timeout.connect(self.update_recording_info)
+
+    def _apply_options_to_widgets(self):
+        """Reflect `bag_recorder.options`' current values in the GUI-editable widgets.
+
+        Called once at startup (after any record config has pre-populated
+        `options`) so the widgets shown to the user match what would
+        actually be recorded if "Start Recording" were pressed right away.
+        """
+        options = self.bag_recorder.options
+
+        if options.get('output_dir'):
+            self.location_input.setText(options['output_dir'])
+
+        index = self.storage_format_combo.findData(options.get('storage'))
+        if index >= 0:
+            self.storage_format_combo.setCurrentIndex(index)
+
+        self.split_duration_spinbox.setValue(int(options.get('max_bag_duration', 0)))
+
+        for i in range(self.topic_list.count()):
+            item = self.topic_list.item(i)
+            if item.text() in options.get('topics', []):
+                item.setSelected(True)
     
     def setup_ui(self):
         """Set up the user interface."""
@@ -304,10 +342,17 @@ class BagRecordWidget(QWidget):
             self.status_label.setStyleSheet("font-size: 13px; font-weight: bold; color: #e74c3c;")
             return
 
-        # Start recording
+        # Write current widget values into bag_recorder.options - this merges
+        # seamlessly with any values pre-populated from a record config file,
+        # since the user only overrides what they actually changed in the GUI.
         duration = self.duration_spinbox.value()
         split_duration = self.split_duration_spinbox.value()
-        success = self.bag_recorder.start_recording(selected_topics, save_location, storage_format, duration, split_duration)
+        self.bag_recorder.options['topics'] = selected_topics
+        self.bag_recorder.options['storage'] = storage_format
+        self.bag_recorder.options['max_bag_duration'] = split_duration
+        self.bag_recorder.options['output_dir'] = save_location
+
+        success = self.bag_recorder.start_recording(save_location, duration)
 
         if success:
             self.status_label.setText(f'Status: 🔴 Recording {len(selected_topics)} topics...')
@@ -394,7 +439,6 @@ class BagRecordWidget(QWidget):
                         stderr_output = self.bag_recorder.read_stderr_tail(300)
                         self.bag_recorder.recording_process = None
                         self.bag_recorder.is_recording = False
-                        self.bag_recorder.recording_topics = []
                         self.recording_start_time = None
 
                         error_msg = stderr_output if stderr_output else f'Process exited with code {retcode}'

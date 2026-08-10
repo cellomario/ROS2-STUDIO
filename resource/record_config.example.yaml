@@ -1,0 +1,42 @@
+# Example ros2_studio bag record default-configuration file.
+#
+# Pass this to the GUI at launch with:
+#   ros2 studio --record-config /path/to/record_config.yaml
+#
+# All keys are optional. Values here become the *initial* state of the Bag
+# Recorder tab; the GUI remains fully editable afterwards and is not
+# re-synced with this file. Only keys present here are applied — anything
+# omitted keeps ros2_studio's normal default. Entries with no matching GUI
+# control (most of "discovery"/"recording"/"compression" below) are still
+# passed through to `ros2 bag record` untouched when a recording starts.
+#
+# Keys match `ros2 bag record` CLI flag names, with dashes -> underscores.
+# See `ros2 bag record --help` for authoritative flag documentation.
+
+output:
+  output_dir: null                 # directory to save bags in (defaults to ~/ros2_bags)
+  storage: mcap                    # -s/--storage
+  storage_preset_profile: null     # --storage-preset-profile (e.g. zstd_fast)
+  storage_config_file: null        # path to an existing --storage-config-file YAML
+
+topics:
+  topics: ["/rosout"]                       # topics, e.g. [/scan, /odom]
+  #all_topics: null                # 
+  regex: ""                        # --regex
+  exclude_topics: []
+  static_topics_path: null         # path to an existing --static-topics-path YAML
+
+discovery:
+  no_discovery: false
+  polling_interval: 100            # milliseconds
+  qos_profile_overrides_path: null # path to an existing --qos-profile-overrides-path YAML
+
+recording:
+  max_bag_size: 0                  # bytes, 0 = no split by size
+  max_bag_duration: 0              # seconds, 0 = no split by duration
+  max_cache_size: 104857600        # bytes (default: 100 MiB)
+  use_sim_time: false
+
+compression:
+  compression_mode: none           # none | file | message
+  compression_format: ""           # e.g. zstd (required if compression_mode != none)

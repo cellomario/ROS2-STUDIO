@@ -13,11 +13,19 @@ class StudioCommand(CommandExtension):
             action='store_true',
             help='Display version information'
         )
-    
+        parser.add_argument(
+            '--record-config',
+            type=str,
+            default=None,
+            metavar='PATH',
+            help='Path to a YAML file with default bag record settings, '
+                 'applied as the initial Bag Recorder tab state at launch'
+        )
+
     def main(self, *, parser, args):
         """Execute the command."""
         if args.version:
             print("ROS2 Studio v0.1.0")
             return 0
         
-        return gui_main()
+        return gui_main(record_config_path=args.record_config)

@@ -16,8 +16,14 @@ from ros2_studio.gui.system_dashboard_widget import SystemDashboardWidget
 class MainWindow(QMainWindow):
     """Main application window with feature selection."""
     
-    def __init__(self):
-        """Initialize the main window."""
+    def __init__(self, record_config=None, record_config_path=None):
+        """Initialize the main window.
+
+        Args:
+            record_config: Optional flat dict of default bag record settings
+            record_config_path: Path the config was loaded from, shown in the
+                Bag Recorder tab's notice when record_config is set
+        """
         super().__init__()
         self.setWindowTitle('ROS2 Studio - Monitoring & Management Tool')
         self.setGeometry(100, 100, 1400, 900)
@@ -51,7 +57,9 @@ class MainWindow(QMainWindow):
         # Initialize feature widgets
         try:
             self.monitoring_widget = MonitoringWidget()
-            self.bag_record_widget = BagRecordWidget()
+            self.bag_record_widget = BagRecordWidget(
+                record_config=record_config, record_config_path=record_config_path
+            )
             self.bag_play_widget = BagPlayWidget()
             self.bag_convert_widget = BagConvertWidget()
             self.dashboard_widget = SystemDashboardWidget()
