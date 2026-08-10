@@ -15,7 +15,7 @@ class BagRecorder:
         self.recording_topics = []
         self.save_location = None
         self.bag_path = None
-        self.storage_format = 'sqlite3'
+        self.storage_format = 'mcap'
         self.is_recording = False
         self.stderr_log_path = None
         self._stderr_log_file = None
@@ -51,7 +51,7 @@ class BagRecorder:
             print(f"Error getting topics: {e}")
             return []
     
-    def start_recording(self, topics, save_location, storage_format='sqlite3', duration=0, split_duration=0):
+    def start_recording(self, topics, save_location, storage_format='mcap', duration=0, split_duration=0):
         """
         Start recording selected topics to a bag file.
 

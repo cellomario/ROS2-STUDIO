@@ -104,11 +104,12 @@ class BagRecordWidget(QWidget):
         format_label.setStyleSheet("font-weight: bold;")
 
         self.storage_format_combo = QComboBox()
-        self.storage_format_combo.addItem('sqlite3', 'sqlite3')
         self.storage_format_combo.addItem('mcap', 'mcap')
+        self.storage_format_combo.addItem('sqlite3', 'sqlite3')
         self.storage_format_combo.setToolTip(
-            'sqlite3: default ROS2 format (.db3)\n'
-            'mcap: modern format, better tooling support (.mcap)'
+            'mcap: default, streaming append format with lower overhead,\n'
+            '      recommended for high-bitrate topics (.mcap)\n'
+            'sqlite3: legacy ROS2 format (.db3)'
         )
         self.storage_format_combo.setStyleSheet("""
             QComboBox {
