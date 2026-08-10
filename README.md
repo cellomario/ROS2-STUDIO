@@ -89,7 +89,7 @@ To run the dockerized app:
 # Allow X11 connections from containers (run once per session)
 xhost +local:
 
-docker run -it --rm -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix ros2-studio
+docker run -it --rm --env-file <(env) -v /tmp/.X11-unix:/tmp/.X11-unix ros2-studio
 ```
 You have to use X11 tunneling to display the GUI.
 
