@@ -13,13 +13,11 @@ A comprehensive ROS2 monitoring and management tool with GUI for performance mon
 ## Installation
 
 ```bash
-# Install dependencies
-sudo apt-get install python3-pyqt5 python3-matplotlib python3-psutil
-sudo apt-get install ros-$ROS_DISTRO-rosbag2-py ros-$ROS_DISTRO-rosbag2-storage-mcap
-
 # Build
-cd ~/ros2_ws
-colcon build --packages-select ros2_studio
+git clone https://github.com/Sourav0607/ROS2-STUDIO
+cd ~/ROS2-STUDIO
+rosdep update && rosdep install --from-paths . -r -y
+colcon build
 source install/setup.bash
 
 # Launch
@@ -27,6 +25,10 @@ ros2 studio
 ```
 
 ## Usage
+
+```
+ros2 studio
+```
 
 Launch the GUI and select features from the dropdown menu:
 1. **Performance Monitor** - Select Topics/Nodes and view real-time metrics
