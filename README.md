@@ -78,13 +78,29 @@ ros2_studio/
 ![System Dashboard](resource/screenshots/systm%20dashboard.png)
 *System resources, ROS2 entities, network stats, and process monitoring*
 
+## Docker
+
+You can build this project with docker:
+```bash
+docker build -t ros2-studio .
+```
+To run the dockerized app:
+```bash
+# Allow X11 connections from containers (run once per session)
+xhost +local:
+
+docker run -it --rm -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix ros2-studio
+```
+You have to use X11 tunneling to display the GUI.
+
 ## License
 
 Apache License 2.0
 
-## Author
+## Authors
 
 Sourav Hawaldar (sourav.hawaldar@gmail.com)
+Marcello Cellina (cellina.marcello@gmail.com)
 
 ## Repository
 
