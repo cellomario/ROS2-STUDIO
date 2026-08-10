@@ -59,23 +59,23 @@ ros2_studio/
 ## Screenshots
 
 ### Performance Monitor
-![Performance Monitor](ros2_studio/performanc%20metrics.png)
+![Performance Monitor](resource/screenshots/performanc%20metrics.png)
 *Real-time CPU, memory, and frequency monitoring with graphical plots*
 
 ### Bag Recorder
-![Bag Recorder](ros2_studio/bag%20recorder.png)
+![Bag Recorder](resource/screenshots/bag%20recorder.png)
 *Multi-topic selection with format, duration, and split controls*
 
 ### Bag Player
-![Bag Player](ros2_studio/bag%20play.png)
+![Bag Player](resource/screenshots/bag%20play.png)
 *Playback control with adjustable rate and loop options*
 
 ### Bag to CSV Converter
-![CSV Converter](ros2_studio/convert%20to%20csv.png)
+![CSV Converter](resource/screenshots/convert%20to%20csv.png)
 *Convert bag topics to ML-ready CSV with full message deserialization*
 
 ### System Dashboard
-![System Dashboard](ros2_studio/systm%20dashboard.png)
+![System Dashboard](resource/screenshots/systm%20dashboard.png)
 *System resources, ROS2 entities, network stats, and process monitoring*
 
 ## License
