@@ -138,7 +138,10 @@ class BagRecorder:
             # If duration expired it already exited on its own.
             if self.recording_process.poll() is None:
                 os.killpg(os.getpgid(self.recording_process.pid), signal.SIGINT)
-                self.recording_process.wait(timeout=10)
+                # Allow up to 30s for graceful shutdown: high-bitrate recordings
+                # can have a large unflushed writer buffer, and killing too soon
+                # risks a corrupted/unreadable bag file.
+                self.recording_process.wait(timeout=30)
 
             saved_path = self.bag_path
             self._close_stderr_log()
