@@ -89,9 +89,20 @@ To run the dockerized app:
 # Allow X11 connections from containers (run once per session)
 xhost +local:
 
-docker run -it --rm --env-file <(env) -v /tmp/.X11-unix:/tmp/.X11-unix ros2-studio
+docker run -it --rm \
+    -e DISPLAY=$DISPLAY \
+    -v /tmp/.X11-unix:/tmp/.X11-unix \
+    ros2-studio
 ```
-You have to use X11 tunneling to display the GUI.
+The container defaults to the X11 (xcb) Qt backend. If you're on a Wayland-only system without XWayland, override with:
+```bash
+docker run -it --rm \
+    -e WAYLAND_DISPLAY=$WAYLAND_DISPLAY \
+    -e QT_QPA_PLATFORM=wayland \
+    -e XDG_RUNTIME_DIR=/tmp/runtime-root \
+    -v $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY:/tmp/runtime-root/$WAYLAND_DISPLAY \
+    ros2-studio
+```
 
 ## License
 
