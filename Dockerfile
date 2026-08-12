@@ -7,12 +7,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy the repository into the workspace
 WORKDIR /ros2_ws
 COPY . src/ros2_studio/
-
-# Update rosdep and install dependencies
-RUN rosdep update && \
-    rosdep install --from-paths src --ignore-src -r -y && \
-    rm -rf /var/lib/apt/lists/*
-
 # Build the package
 RUN . /opt/ros/jazzy/setup.sh && \
     colcon build --packages-select ros2_studio
